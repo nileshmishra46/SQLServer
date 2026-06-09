@@ -1,0 +1,37 @@
+DECLARE @dbname NVARCHAR(128)
+DECLARE @logFileName NVARCHAR(128)
+DECLARE @statement NVARCHAR(500)
+
+DECLARE db_cursor CURSOR FOR
+SELECT name
+FROM sys.databases
+WHERE state_desc = 'ONLINE' AND name NOT IN ('master', 'model', 'msdb', 'tempdb')
+
+OPEN db_cursor
+FETCH NEXT FROM db_cursor INTO @dbname
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    DECLARE log_cursor CURSOR FOR
+    SELECT name
+    FROM sys.master_files
+    WHERE type_desc = 'LOG' AND database_id = DB_ID(@dbname)
+
+    OPEN log_cursor
+    FETCH NEXT FROM log_cursor INTO @logFileName
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @statement = 'USE [' + @dbname + ']; DBCC SHRINKFILE (N''' + @logFileName + ''', 1);'
+        EXEC sp_executesql @statement
+        FETCH NEXT FROM log_cursor INTO @logFileName
+    END
+
+    CLOSE log_cursor
+    DEALLOCATE log_cursor
+
+    FETCH NEXT FROM db_cursor INTO @dbname
+END
+
+CLOSE db_cursor
+DEALLOCATE db_cursor

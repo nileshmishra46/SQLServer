@@ -1,0 +1,20 @@
+select 
+    --Job Information
+     a.job_id
+    ,a.name
+    ,a.description
+    --SSIS package Information
+    ,b.name
+    ,b.id
+    ,b.description
+    --Job steps Information
+    ,js.step_id
+    ,js.step_name
+    ,js.subsystem
+    ,js.command
+
+ from  msdb.dbo.sysjobs  a 
+Left Join msdb.dbo.sysjobsteps js on js.job_id=a.job_id 
+left join msdb.dbo.sysssispackages b
+on a.name=b.name
+Where js.step_name = 'ACM_CD_Run_Dim_Load'

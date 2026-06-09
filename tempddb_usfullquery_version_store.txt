@@ -1,0 +1,17 @@
+SELECT SUM(version_store_reserved_page_count) AS [version store pages used],
+(SUM(version_store_reserved_page_count)*1.0/128) AS [version store space in MB]
+FROM sys.dm_db_file_space_usage;
+
+SELECT t.session_id, (select object_name(objectid) from sys.fn_get_sql(p.sql_handle)) as sql, t.elapsed_time_seconds, transaction_id, p.dbid, p.hostname
+FROM sys.dm_tran_active_snapshot_database_transactions t
+JOIN sys.sysprocesses p on t.session_id = p.spid
+ORDER BY t.elapsed_time_seconds DESC;
+
+USE TEMPDB
+GO
+DECLARE @VersionStoreSize FLOAT(1)
+Declare @TempDBSize FLOAT(1)
+SET @VersionStoreSize = (SELECT (SUM(version_store_reserved_page_count)*1.0/128) AS [version store space in MB] FROM sys.dm_db_file_space_usage)
+SET @TempDBSize = (SELECT (SUM(total_page_count)*1.0/128) AS [version store space in MB] FROM sys.dm_db_file_space_usage)
+SELECT (@VersionStoreSize/@TempDBSize)*100 AS [Version Store Percent of TempDB]
+

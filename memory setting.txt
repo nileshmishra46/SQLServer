@@ -1,0 +1,90 @@
+--Query to get the SQL Servers Configs (Run on All DR SQL Instances at once to get BuildLevel, CPUCount, Max/Min Mem, etc)
+
+DECLARE @sqlver varchar(10), @cmd1 varchar(2000), @cmd2 varchar(2000);
+
+--Query for SQL2008 & below
+SET @cmd1 = '
+DECLARE @sqlsvcacct varchar(60);
+
+EXEC xp_regread 
+		@root_key  	= ''HKEY_LOCAL_MACHINE'',
+   		@key   		= ''SYSTEM\ControlSet001\Services\MSSQLServer'',
+   		@valuename  = ''ObjectName'',
+   		@value   	= @sqlsvcacct output;
+
+SELECT
+  @@SERVERNAme AS ''Server''
+  ,BuildLevel = SERVERPROPERTY(''ProductVersion'')
+  ,CASE 
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''8%'' THEN ''SQL2000''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''9%'' THEN ''SQL2005''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''10.0%'' THEN ''SQL2008''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''10.5%'' THEN ''SQL2008 R2''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''11%'' THEN ''SQL2012''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''12%'' THEN ''SQL2014''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''13%'' THEN ''SQL2016''  
+	 WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''14%'' THEN ''SQL2017''      
+     ELSE ''unknown''
+  END AS MajorVersion
+  ,SPLevel = SERVERPROPERTY(''ProductLevel'')
+   ,@@version as Version
+  ,Edition = SERVERPROPERTY(''Edition'')
+  ,ServerCPU_Count = os.cpu_count
+  ,ServerRAM_MB = os.physical_memory_in_bytes/1024/1024
+  ,SQL_MAX_Mem_MB = cf1.value_in_use
+  ,SQL_MIN_Mem_MB = cf2.value_in_use
+  ,SQL_Max_Mem_Percent= convert(decimal(20,2),((convert(float, cf1.value_in_use)/(os.physical_memory_kb/1024.00))*100.00))
+  ,SQL_Min_Mem_Percent= convert(decimal(20,2),((convert(float, cf2.value_in_use)/(os.physical_memory_kb/1024.00))*100.00))
+  ,''RequiredMAX_87.5'' = convert(decimal(20),((os.physical_memory_in_bytes/1024/1024)*0.875))
+  ,RequiredMIN_50= convert(decimal(20),((os.physical_memory_in_bytes/1024/1024)*0.50))
+  ,SQL_Service_Acct = @sqlsvcacct
+FROM sys.dm_os_sys_info os, sys.configurations cf1, sys.configurations cf2
+WHERE cf1.name = ''max server memory (MB)'' AND  cf2.name = ''min server memory (MB)'';
+'
+--Query for SQL2012 & above
+SET @cmd2 = '
+DECLARE @sqlsvcacct varchar(60);
+EXEC xp_regread 
+		@root_key  	= ''HKEY_LOCAL_MACHINE'',
+   		@key   		= ''SYSTEM\ControlSet001\Services\MSSQLServer'',
+   		@valuename  = ''ObjectName'',
+   		@value   	= @sqlsvcacct output;
+SELECT
+  @@SERVERNAme AS ''Server''
+  ,BuildLevel = SERVERPROPERTY(''ProductVersion'')
+  ,CASE 
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''8%'' THEN ''SQL2000''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''9%'' THEN ''SQL2005''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''10.0%'' THEN ''SQL2008''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''10.5%'' THEN ''SQL2008 R2''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''11%'' THEN ''SQL2012''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''12%'' THEN ''SQL2014''
+     WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''13%'' THEN ''SQL2016''
+	 WHEN CONVERT(VARCHAR(128), SERVERPROPERTY (''productversion'')) like ''14%'' THEN ''SQL2017''       
+     ELSE ''unknown''
+  END AS MajorVersion
+  ,SPLevel = SERVERPROPERTY(''ProductLevel'')
+  ,@@version as Verstion
+  ,Edition = SERVERPROPERTY(''Edition'') 
+  ,ServerCPU_Count = os.cpu_count
+  ,ServerRAM_MB = os.physical_memory_kb/1024
+  ,SQL_MAX_Mem_MB = cf1.value_in_use
+  ,SQL_MIN_Mem_MB = cf2.value_in_use
+  ,SQL_Max_Mem_Percent= convert(decimal(20,2),((convert(float, cf1.value_in_use)/(os.physical_memory_kb/1024.00))*100.00))
+  ,SQL_Min_Mem_Percent= convert(decimal(20,2),((convert(float, cf2.value_in_use)/(os.physical_memory_kb/1024.00))*100.00))
+  ,''RequiredMAX_87.5'' = convert(decimal(20),((os.physical_memory_kb/1024)*0.875))
+  ,RequiredMIN_50= convert(decimal(20),((os.physical_memory_kb/1024)*0.50))
+  ,SQL_Service_Acct = @sqlsvcacct
+FROM sys.dm_os_sys_info os, sys.configurations cf1, sys.configurations cf2
+WHERE cf1.name = ''max server memory (MB)'' AND  cf2.name = ''min server memory (MB)'';
+'
+
+SELECT @sqlver=(LEFT(CONVERT(VARCHAR(10), SERVERPROPERTY ('productversion')),2))
+
+--PRINT @sqlver
+IF @sqlver < 11
+  --PRINT (@cmd1)
+  EXEC (@cmd1)
+  ELSE
+  --PRINT (@cmd2)
+  EXEC (@cmd2)

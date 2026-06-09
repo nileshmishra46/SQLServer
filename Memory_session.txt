@@ -1,0 +1,23 @@
+SELECT
+    s.session_id,
+    s.login_name,
+    s.status,
+    s.host_name,
+    s.program_name,
+    r.cpu_time,
+    r.total_elapsed_time,
+    mg.requested_memory_kb,
+    mg.granted_memory_kb,
+    mg.used_memory_kb,
+    r.command,
+    t.text AS sql_text
+FROM
+    sys.dm_exec_sessions s
+JOIN
+    sys.dm_exec_requests r ON s.session_id = r.session_id
+LEFT JOIN
+    sys.dm_exec_query_memory_grants mg ON r.plan_handle = mg.plan_handle
+CROSS APPLY
+    sys.dm_exec_sql_text(r.sql_handle) AS t
+ORDER BY
+    mg.used_memory_kb DESC;

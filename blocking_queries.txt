@@ -1,0 +1,263 @@
+SELECT
+tr.name AS [Name],
+tr.object_id AS [ID],
+CAST(
+                tr.is_ms_shipped
+            AS bit) AS [IsSystemObject],
+CASE WHEN tr.type = N'TR' THEN 1 WHEN tr.type = N'TA' THEN 2 ELSE 1 END AS [ImplementationType],
+CAST(CASE WHEN ISNULL(smtr.definition, ssmtr.definition) IS NULL THEN 1 ELSE 0 END AS bit) AS [IsEncrypted]
+FROM
+sys.triggers AS tr
+LEFT OUTER JOIN sys.sql_modules AS smtr ON smtr.object_id = tr.object_id
+LEFT OUTER JOIN sys.system_sql_modules AS ssmtr ON ssmtr.object_id = tr.object_id
+WHERE
+(tr.parent_class = 0)
+ORDER BY
+[Name] ASC
+
+-------------------------------------------------------------------------------------------------------------------
+SELECT
+tr.name AS [Name],
+tr.object_id AS [ID],
+CAST(
+                tr.is_ms_shipped
+            AS bit) AS [IsSystemObject],
+CASE WHEN tr.type = N'TR' THEN 1 WHEN tr.type = N'TA' THEN 2 ELSE 1 END AS [ImplementationType],
+CAST(CASE WHEN ISNULL(smtr.definition, ssmtr.definition) IS NULL THEN 1 ELSE 0 END AS bit) AS [IsEncrypted]
+FROM
+sys.triggers AS tr
+LEFT OUTER JOIN sys.sql_modules AS smtr ON smtr.object_id = tr.object_id
+LEFT OUTER JOIN sys.system_sql_modules AS ssmtr ON ssmtr.object_id = tr.object_id
+WHERE
+(tr.parent_class = 0)
+ORDER BY
+[Name] ASC
+------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE [dbo].[CV3LocationFG] 
+@hvcid HVCIDdt
+AS
+SELECT * FROM CV3Location (nolock)
+WHERE GUID=@hvcid
+-------------------------------------------------------------------------------------------------------------------
+alth Hospital - Whittier
+  invite.ClientGUID, 
+  -- PIH Health Physicans
+  invite.PersonID, 
+  invite.QueueID AS InviteID, 
+  invite.emailAddress AS InviteEmail, 
+  invite.SecurityCode AS InvitePIN, 
+  invite.LastName AS PatientLastName, 
+  invite.FirstName AS PatientFirstName, 
+  invite.DOB AS PatientDOB, 
+  invite.PhoneNumber AS PatientPhone, 
+  invite.ZipCode AS PatientZipCode,
+  invite.IgnoreActiveInvite 
+FROM PIH_FMH_InviteQueue
+------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE SXAObservationUpdPR
+     
+/*'*******************************************************************************    
+'Copyright (c) 2002-4 Eclipsys Technologies Corporation. All Rights Reserved.    '    
+'                                                                              '    
+'  PROPRIETARY NOTICE: This software has been provided pursuant to a           '    
+'  License Agreement that contains restrictions on its use. This software      '    
+'  contains valuable trade secrets and proprietary information of              '    
+'  Eclipsys Technologies Corporation and is protected by Federal               '    
+'  copyright law.  It may not be copied or distributed in any form or medium,  '    
+'  disclosed to third parties, or used in any manner that is not provided      '    
+'  for in said License Agreement, except with the prior written                '    
+'  authorization of Eclipsys Technologies Corporation.                         '    
+'                                                                              '    
+'******************************************************************************'*/    
+( @UserGUID   HVCIDdt,    
+ @VisitGUID   HVCIDdt,    
+     @ChartGUID   HVCIDdt,    
+     @Build                   INT,    
+     @ClientGUID           HVCIDdt,    
+     @ObservationSourceGUID         HVCIDdt = NULL  OUTPUT,    
+     @PatCareDocGUID          HVCIDdt,    
+     @ClientDocumentGUID  HVCIDdt,    
+     @IsClientParam           BIT=0,      
+     @SiteID             SMALLINT,    
+     @UserName             VARCHAR(50),    
+ @AuthoredGUID            HVCIDdt=NULL,    
+ @ParameterGUID           HVCIDdt,    
+ @ChartFlowsheetGUID      HVCIDdt,    
+ @IsFanout                BIT=0,    
+ @RecordedDateTime      DATETIME,    
+ @ValueText          VARCHAR(max) = NULL,       
+ @EnterHeld               BIT=0,    
+ @HasCellComment      BIT=0,    
+ @CellComment           VARCHAR(2000)=NULL,    
+ @ShiftDailyHrlyFlag  INT=0,    
+ @HasModifier       BIT=0,         
+ @IsHighLighted           BIT=0,    
+ @PatCondition            INT=7,     
+ @PatConditionOut  INT = NULL,    
+     @InValue         NUMERIC(15, 5)=NULL,    
+     @OutValue    NUMERIC(15, 5)=NULL,    
+     @DailyValue    NUMERIC(15, 5)=NULL,    
+ @IsWDL    BIT,    
+ @BagNumber   INT = NULL,    
+ @BagVolumeUnit   VARCHAR(30) = NULL,    
+ @BagVolume    NUMERIC(15, 5)=NULL,        
+ @InitialBagVolume   NUMERIC(15, 5)=NULL,    
+ @BagAttributes       SMALLINT=0,    
+ @ValueRate    NUMERIC(15, 5)=NULL,    
+     @ValueDose    NUMERIC(15, 5)=NULL,    
+ @NoteGUID        HVCIDdt = NULL,    
+ @HasNote        BIT = 0,    
+ @MSrepl_tran_version UNIQUEIDENTIFIER = NULL,    
+ @NewID    UNIQUEIDENTIFIER = NULL OUTPUT,    
+ @ObservationDocumentGUID HVCIDdt OUTPUT,    
+--     @NewGUID                      HVCIDdt OUTPUT    
+ @NewCommentGUID  HVCIDdt=NULL,    
+     @HasImageType        TINYINT = 0,    
+ @FormattedValueText VARCHAR(MAX) = NULL,
+ @ArcType int=null,  
+ @IsDifferentVisit bit = 0,
+ @HistorySeqNum INT = 0,
+ @BaseImageReference VARCHAR(5) = NULL,
+ @HotspotVersion SMALLINT = NULL,
+ @SmartPumpOrderTaskID BIGINT, --US-4013113
+ @SmartPumpEventInfo VARCHAR(100),
+ @DataCapturedAtUTC DATETIMEOFFSET(3) --US 4482458 
+ )   
+AS    
+--==============================================================================================    
+-- Stored procedure: SXAObservationUpdPR    
+--    
+-- Function: Retrieves all Flowsheet Entry Items    
+--    
+-- Inputs:  @UserGUID      User making the update    
+--       @VisitGUID Client's visit    
+--    @ChartGUID                 Chart flowsheet belongs to     
+--    @Build                            Build #    
+--   @ClientGUID                Client being charted    
+--    @ObservationSourceGUID                  Observation GUID, if this is an update    
+--    @PatCareDocGUID                   PatCareDocument flowsheet belongs to    
+--    @ClientD
+------------------------------------------------------------------------------------------------------
+IF EXISTS ( SELECT * 
+		FROM CV3ClientDocument AS cd
+		INNER JOIN CV3ClientDocHistory AS Hist
+			ON (cd.ClientGUID = Hist.ClientGUID
+				AND cd.GUID = Hist.ClientDocGUID)
+		INNER JOIN CV3PatientCareDocument AS pcd  
+			ON (pcd.GUID = cd.PatCareDocGUID)  
+		INNER JOIN CV3DocumentReviewCategory AS drc1  
+			ON (drc1.GUID = pcd.DocReviewCategoryGUID)  
+		INNER JOIN CV3DocumentReviewCategory AS drc2  
+			ON (drc2.MasterCategoryName = drc1.MasterCategoryName)
+		WHERE cd.ClientGUID = @ClientGUID
+		AND cd.ChartGUID = @ChartGUID
+		AND Hist.UserGUID != @UserGUID
+		AND ISNULL(cd.ArrivalDtm, cd.CreatedWhen) > @FromDATE
+		AND ISNULL(Hist.ArrivalDtm, Hist.CreatedWhen) > @FromDATE
+		AND( ( Hist.RevisionStatusType  = 0  and (Hist.HistoryReason like '%Create%' or   Hist.HistoryReason like '%Revised%' )) OR Hist.RevisionStatusType in (1,2))
+		AND drc2.IsMasterCategory = 1 )
+---------------------------------------------------------------------------------------------------------
+select Build, TouchedBy, TouchedWhen, CreatedBy, CreatedWhen, Active, GUID, IsLeafNode, Hierarchy, ParentGUID, ApplicationID, Code, HierarchyCode, DisplaySequence, Value, HVCValue, Description, IsHVCDefined, UserID, IsLocked from HVCUserProfile WHERE UserID = 'hlee6' AND HierarchyCode = 'hlee6|PatientSelectionLists' AND Code like 'CurrentList%' AND NOT Value IS NULL
+---------------------------------------------------------------------------------------------------------
+-- DROP PROC SXAHMHealthEventStatusSelPr
+
+/* P r o p r i e t a r y N o t i c e */
+/* Copyright (C) 2015 Allscripts Healthcare Solutions, Inc. and/or its affiliates. Unpublished. All Rights Reserved.
+*
+* P r o p r i e t a r y N o t i c e: This software has been provided pursuant to a License Agreement containing
+restrictions on its use. This software contains valuable trade secrets and proprietary information of Allscripts
+Healthcare Solutions, Inc. and/or its affiliates and is protected by Federal copyright law. It may not be copied or
+distributed in any form or medium, disclosed to third parties, or used in any manner not provided for in said License
+Agreement except with prior written authorization from Allscripts Healthcare Solutions, Inc. and/or its affiliates. 
+ 
+Allscripts and Sunrise is either a registered trademark or trademark of Allscripts Healthcare Solutions, Inc. and/or
+its affiliates.
+*
+**/
+/* P r o p r i e t a r y N o t i c e */
+
+CREATE PROCEDURE SXAHMHealthEventStatusSelPr
+(
+   @ClientGUID HVCIDdt
+)
+
+AS
+SET NOCOUNT ON
+
+/*
+Confidential and proprietary information of Allscripts Healthcare Solutions, Inc. and/or its affiliates. Authorized
+users only. U.S. Government Users: ?Commercial Computer Software.? Subject to full notice set forth herein.
+*/
+
+DECLARE @HealthEventStatusDue bit
+DECLARE @HealthEventStatusNearDue bit
+DECLARE @HealthEventStatusHasSchedule bit
+
+SET @HealthEventStatusDue = 0           -- Nothing due now
+SET @HealthEventStatusNearDue = 0       -- Nothing near due
+SET @HealthEventStatusHasSchedule = 0   -- Assume no assigned schedule
+
+    -- Used to lookup the visibility of occurrence, based on parent/child combo rules
+    DECLARE @schedOccs TABLE ( ScheduledEventOccurrenceID bigint) 
+    
+    INSERT INTO @schedOccs ( ScheduledEventOccurrenceID )
+	SELECT 
+	   seo.ScheduledEventOccurrenceID
+	FROM 
+	   dbo.SXAHMClientEventDisplayFlagTblFn (@ClientGUID) df
+	   INNER JOIN SXAHMClientEvent ce ON (ce.ClientEventID = df.ClientEventID)
+	   INNER JOIN SXAHMScheduledEventOccurrence seo ON (seo.EventID = ce.EventID and ce.ClientGUID = seo.ClientGUID)
+   WHERE
+      df.IsDisplayed = 1 and seo.OccurrenceStatusType = 0
+
+
+    -- Need today's date without the time information
+	DECLARE @today DATE 
+	SET @today = dbo.SXADBGetEnterpriseNowFn(); 
+	
+	-- Determine if there is at least one event that is due
+	SELECT @HealthEventStatusDue = 
+	   ISNULL((SELECT TOP 1 1 
+	          FROM SXAHMScheduledEventOccurrence seo
+	          INNER JOIN @schedOccs occs ON (seo.ScheduledEventOccurrenceID = occs.scheduledEventOccurrenceID ) 
+	          WHERE OccurrenceStatusType = 0 AND ClientGUID = @ClientGUID and seo.ScheduledDateStart <= @today), 0)
+	
+	-- Determine if there is at least one event that is near due
+	SELECT @HealthEventStatusNearDue = 
+	   ISNULL((SELECT TOP 1 1
+	          FROM SXAHMScheduledEventOccurrence seo
+	          INNER JOIN @schedOccs occs ON (seo.ScheduledEventOccurrenceID = occs.scheduledEventOccurrenceID ) 
+	          INNER JOIN SXAHMEvent e ON (seo.EventID = e.EventID)
+	          WHERE OccurrenceStatusType = 0 AND ClientGUID = @ClientGUID and dbo.SXAHMIsNearDueDateFn(seo.ScheduledDateStart,e.NearDueValue, e.NearDueUOM, @Today)=1), 0)
+
+    -- Determine if there is at least one assigned schedule
+	SELECT @HealthEventStatusHasSchedule = 
+	   ISNULL( (SELECT TOP 1 1 
+                FROM SXAHMClientSchedule s
+                WHERE ClientGUID = @ClientGUID AND s.Active = 1), 0)
+
+
+
+SELECT @HealthEventStatusDue 'Due', @HealthEventStatusNearDue 'NearDue', @HealthEventStatusHasSchedule 'HasSchedule'
+-------------------------------------------------------------------------------------------------------------------------
+alth Hospital - Whittier
+  invite.ClientGUID, 
+  -- PIH Health Physicans
+  invite.PersonID, 
+  invite.QueueID AS InviteID, 
+  invite.emailAddress AS InviteEmail, 
+  invite.SecurityCode AS InvitePIN, 
+  invite.LastName AS PatientLastName, 
+  invite.FirstName AS PatientFirstName, 
+  invite.DOB AS PatientDOB, 
+  invite.PhoneNumber AS PatientPhone, 
+  invite.ZipCode AS PatientZipCode,
+  invite.IgnoreActiveInvite 
+FROM PIH_FMH_InviteQueue
+
+
+
+
+
+
+

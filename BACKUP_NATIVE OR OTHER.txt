@@ -1,0 +1,13 @@
+SELECT     TOP 10 
+   dbo.backupset.database_name, 
+   dbo.backupmediafamily.physical_device_name, 
+   dbo.backupset.backup_start_date,
+   dbo.backupset.backup_finish_date
+FROM         
+   dbo.backupmediafamily INNER JOIN
+   dbo.backupset ON dbo.backupmediafamily.media_set_id = dbo.backupset.media_set_id
+WHERE     
+   (dbo.backupset.database_name = N'EMR')
+   AND (dbo.backupset.type = 'D')
+ORDER BY 
+    dbo.backupset.backup_start_date DESC 

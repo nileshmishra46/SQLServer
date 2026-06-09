@@ -1,0 +1,22 @@
+
+select  @@servername as node, getdate() as StatusAt,* from sys.endpoints
+go
+SELECT r.replica_server_name ,
+ r.endpoint_url ,
+ rs.connected_state_desc ,
+ rs.last_connect_error_description ,
+ rs.last_connect_error_number ,
+ rs.last_connect_error_timestamp
+ FROM sys.dm_hadr_availability_replica_states rs
+ JOIN sys.availability_replicas r ON rs.replica_id = r.replica_id
+ WHERE rs.is_local = 1;
+ go
+ SELECT name ,
+ type_desc ,
+ state_desc ,
+ role_desc ,
+ is_encryption_enabled ,
+ connection_auth_desc ,
+ encryption_algorithm_desc
+ FROM sys.database_mirroring_endpoints; 
+ 

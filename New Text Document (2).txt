@@ -1,0 +1,8 @@
+SELECT j.name, 
+       js.step_id,
+       js.step_name,
+       js.command
+FROM   msdb.dbo.sysjobs     j,
+       msdb.dbo.sysjobsteps js
+WHERE  j.job_id = js.job_id
+AND    js.subsystem = 'SSIS'

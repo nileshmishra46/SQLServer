@@ -1,0 +1,51 @@
+Select * --count (*) as 'NumberOfOpenTransactions' 
+From sys.dm_tran_database_transactions (Nolock) dt inner join sys.databases (Nolock) sd on dt.database_id = sd.database_id 
+Where dt.database_transaction_begin_time < DATEADD (minute, -30, getdate())
+go
+Select sd.name as 'DBName', dt.Transaction_id, dt.Database_Transaction_Type, dt.Database_Transaction_State, 
+dt.Database_Transaction_Status, datediff(minute,dt.database_transaction_begin_time,getdate()) as [Duration] 
+From sys.dm_tran_database_transactions dt (Nolock) Inner join sys.databases sd (Nolock) on dt.database_id = sd.database_id 
+Where sd.name not in ('master', 'model') 
+And dt.database_transaction_begin_time < DATEADD (minute, -30, getdate())
+go
+SELECT
+    [s_tst].[session_id],
+      [s_tdt].[transaction_id],
+      Case [s_tdt].[database_transaction_type]
+          When 1 Then 'Read-Write'
+            When 2 Then 'Read Only'
+            When 3 Then 'System'
+            When 4 Then 'Distributed'
+      End as 'Transaction type',
+      Case [s_tdt].[database_transaction_state]
+            When 1 Then 'Not yet initialized'
+            When 3 Then 'Initialized w/o log records'
+            When 4 Then 'Generated log records'
+            When 5 Then 'Prepared'
+            When 10 Then 'Committed'
+            When 11 Then 'Rolled back'
+            When 12 Then 'Committed with log records'
+      End as 'Transaction State',
+      CASE [s_es].[transaction_isolation_level] 
+            WHEN 0 THEN 'Unspecified' 
+            WHEN 1 THEN 'Read Uncommitted' 
+            WHEN 2 THEN 'Read Committed' 
+            WHEN 3 THEN 'Repeatable' 
+            WHEN 4 THEN 'Serializable' 
+            WHEN 5 THEN 'Snapshot' 
+        END as 'Isolation Level', 
+    [s_es].[login_name] AS [Login Name],
+    DB_NAME (s_tdt.database_id) AS [Database],
+    [s_tdt].[database_transaction_begin_time] AS [Begin Time],
+    [s_tdt].[database_transaction_log_bytes_used] AS [Log Bytes],
+    [s_tdt].[database_transaction_log_bytes_reserved] AS [Log Rsvd],
+    [s_est].text AS [Last T-SQL Text]
+FROM sys.dm_tran_database_transactions [s_tdt] 
+      JOIN sys.dm_tran_session_transactions [s_tst] ON [s_tst].[transaction_id] = [s_tdt].[transaction_id]
+      JOIN sys.[dm_exec_sessions] [s_es] ON [s_es].[session_id] = [s_tst].[session_id]
+      JOIN sys.dm_exec_connections [s_ec] ON [s_ec].[session_id] = [s_tst].[session_id]
+      LEFT OUTER JOIN sys.dm_exec_requests [s_er] ON [s_er].[session_id] = [s_tst].[session_id]
+      CROSS APPLY sys.dm_exec_sql_text ([s_ec].[most_recent_sql_handle]) AS [s_est]
+WHERE DB_NAME (s_tdt.database_id) not in ('master', 'model')
+AND ([s_tdt].database_transaction_begin_time) < DATEADD (minute, -30, getdate())
+go

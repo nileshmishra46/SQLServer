@@ -1,0 +1,21 @@
+SELECT dbf.name AS LogicalFileName,
+dbf.physical_name AS PhysicalFileName,
+   'filegroup' = f.name,
+CASE         
+       WHEN dbf.is_percent_growth = 0 THEN 'By ' + LTRIM(STR(dbf.growth * 8.0 / 1024,10,1)) + ' MB, '         
+       ELSE 'By ' + CAST(dbf.growth AS VARCHAR) + ' percent, ' END +     
+       CASE 
+       WHEN dbf.max_size = -1 THEN 'unrestricted growth'        
+       ELSE 'restricted growth to ' + LTRIM(STR(dbf.max_size * 8.0 / 1024,10,1)) + ' MB'     
+       END AS Autogrow,
+CAST((dbf.size/131072.0) AS decimal (18,2)) AS FileSizeInGB, 
+CAST(dbf.size/131072.0 - CAST(FILEPROPERTY(dbf.name, 'SpaceUsed') AS decimal)/131072.0 AS decimal (18,2)) AS AvailableSpaceInGB,
+(CAST(((dbf.size/131072.0 - CAST(FILEPROPERTY(dbf.name, 'SpaceUsed') AS decimal )/131072.0) / (dbf.size/131072.0)) AS decimal (18,2))) * 100 AS PercentFree
+,db.recovery_model_desc
+,db.log_reuse_wait_desc
+FROM sys.database_files dbf
+LEFT JOIN sys.sysaltfiles saf ON saf.filename = dbf.physical_name
+LEFT JOIN sys.databases db on db.database_id = saf.dbid
+JOIN sys.filegroups f on f.data_space_id = dbf.data_space_id
+ORDER BY 1,2
+GO

@@ -1,0 +1,4 @@
+DECLARE @SQLScript NVARCHAR(MAX)
+SELECT @SQLScript = ISNULL(@SQLScript,'') + 'DBCC OPENTRAN('+ Name +');'
+FROM sys.databases
+EXEC (@SQLScript)

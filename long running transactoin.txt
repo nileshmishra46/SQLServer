@@ -1,0 +1,10 @@
+Select * --count (*) as 'NumberOfOpenTransactions' 
+From sys.dm_tran_database_transactions (Nolock) dt inner join sys.databases (Nolock) sd on dt.database_id = sd.database_id 
+Where dt.database_transaction_begin_time < DATEADD (minute, -30, getdate())
+go
+Select sd.name as 'DBName', dt.Transaction_id, dt.Database_Transaction_Type, dt.Database_Transaction_State, 
+dt.Database_Transaction_Status, datediff(minute,dt.database_transaction_begin_time,getdate()) as [Duration] 
+From sys.dm_tran_database_transactions dt (Nolock) Inner join sys.databases sd (Nolock) on dt.database_id = sd.database_id 
+Where sd.name not in ('master', 'model') 
+And dt.database_transaction_begin_time < DATEADD (minute, -30, getdate())
+go 

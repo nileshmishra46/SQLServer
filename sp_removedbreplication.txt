@@ -1,0 +1,15 @@
+ sp_removedbreplication 'TST2' -- on Publication server 
+Go
+ 
+-- the below query need sto be excecuted on Distributor : MDDFOMN002VQM22
+select * from msdb..MSdistpublishers
+select * from distribution..MSpublisher_databases
+select * from distribution..MSpublications
+select * from distribution..MSarticles
+select * from distribution..MSsubscriptions
+ 
+delete from distribution..MSarticles where publisher_db = 'TST2'
+delete from distribution..MSsubscriptions where publisher_db = 'TST2'
+delete from distribution..MSpublications where publisher_db = 'TST2'
+delete from distribution..MSpublisher_databases where publisher_db = 'TST2'
+exec sp_replflush

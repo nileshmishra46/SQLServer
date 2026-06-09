@@ -1,0 +1,1 @@
+select * from msdb.dbo.sysjobs where CONVERT(binary(16), job_id)=0x496FDBA38EB8CC48AA2D8D42AA8D30A9 

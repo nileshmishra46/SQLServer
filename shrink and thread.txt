@@ -1,0 +1,32 @@
+USE [HVCES_EAS] 
+GO
+--checkpoint
+--dbcc opentran
+dbcc sqlperf(logspace)
+DBCC SHRINKFILE (N'HVCES_EAS_log' ,2048)
+GO
+
+
+5(I&GAvNwsm'
+
+
+
+lal - 2018-12-14 00:00:34.853 
+MHP - 2018-12-13 18:02:31.737 
+TAL1  2018-12-14 00:06:22.600
+TAL2  2018-12-14 00:02:10.187 
+wrm 2018-12-13 21:51:57.823
+
+
+declare @max int
+select @max = max_workers_count from sys.dm_os_sys_info
+
+select 
+    @max as 'TotalThreads',
+    sum(active_Workers_count) as 'CurrentThreads',
+    @max - sum(active_Workers_count) as 'AvailableThreads',
+    sum(runnable_tasks_count) as 'WorkersWaitingForCpu',
+    sum(work_queue_count) as 'RequestWaitingForThreads' ,
+    sum(current_workers_count) as 'AssociatedWorkers'
+from  
+    sys.dm_os_Schedulers where status='VISIBLE ONLINE'

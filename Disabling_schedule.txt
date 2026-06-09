@@ -1,0 +1,31 @@
+DECLARE @job_id uniqueidentifier
+DECLARE @schedule_id int
+
+DECLARE job_cursor CURSOR FOR 
+SELECT job_id FROM msdb.dbo.sysjobs
+
+OPEN job_cursor
+
+FETCH NEXT FROM job_cursor INTO @job_id
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    DECLARE schedule_cursor CURSOR FOR 
+    SELECT schedule_id FROM msdb.dbo.sysjobschedules WHERE job_id = @job_id
+
+    OPEN schedule_cursor
+
+    FETCH NEXT FROM schedule_cursor INTO @schedule_id
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        EXEC msdb.dbo.sp_update_schedule @schedule_id = @schedule_id, @enabled = 0
+        FETCH NEXT FROM schedule_cursor INTO @schedule_id
+    END
+
+    CLOSE schedule_cursor
+    DEALLOCATE schedule_cursor
+
+    FETCH NEXT FROM job_cursor INTO @job_id
+END
+
+CLOSE job_cursor
+DEALLOCATE job_cursor

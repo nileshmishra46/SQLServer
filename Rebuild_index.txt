@@ -1,0 +1,49 @@
+DECLARE @TableName NVARCHAR(128)
+DECLARE @IndexName NVARCHAR(128)
+DECLARE @SchemaName NVARCHAR(128)
+DECLARE @SQL NVARCHAR(MAX)
+
+-- Temporary table to store fragmentation details
+CREATE TABLE #FragmentationDetails (
+    TableName NVARCHAR(128),
+    IndexName NVARCHAR(128),
+    SchemaName NVARCHAR(128),
+    Fragmentation FLOAT
+)
+
+-- Insert fragmentation details into the temporary table
+INSERT INTO #FragmentationDetails (TableName, IndexName, SchemaName, Fragmentation)
+SELECT 
+    OBJECT_NAME(ips.object_id) AS TableName,
+    i.name AS IndexName,
+    s.name AS SchemaName,
+    ips.avg_fragmentation_in_percent AS Fragmentation
+FROM 
+    sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'LIMITED') ips
+    JOIN sys.indexes i ON ips.object_id = i.object_id AND ips.index_id = i.index_id
+    JOIN sys.objects o ON ips.object_id = o.object_id
+    JOIN sys.schemas s ON o.schema_id = s.schema_id
+WHERE 
+    ips.avg_fragmentation_in_percent > 30
+    AND i.type_desc IN ('CLUSTERED', 'NONCLUSTERED')
+
+-- Cursor to generate rebuild scripts
+DECLARE FragmentationCursor CURSOR FOR
+SELECT TableName, IndexName, SchemaName
+FROM #FragmentationDetails
+
+OPEN FragmentationCursor
+FETCH NEXT FROM FragmentationCursor INTO @TableName, @IndexName, @SchemaName
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @SQL = 'ALTER INDEX [' + @IndexName + '] ON [' + @SchemaName + '].[' + @TableName + '] REBUILD;'
+    PRINT @SQL
+    FETCH NEXT FROM FragmentationCursor INTO @TableName, @IndexName, @SchemaName
+END
+
+CLOSE FragmentationCursor
+DEALLOCATE FragmentationCursor
+
+-- Drop the temporary table
+DROP TABLE #FragmentationDetails

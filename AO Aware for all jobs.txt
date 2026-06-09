@@ -1,0 +1,41 @@
+DECLARE @job_id uniqueidentifier, @step_id int
+DECLARE job_cursor CURSOR FOR 
+SELECT job_id FROM msdb.dbo.sysjobs
+OPEN job_cursor
+FETCH NEXT FROM job_cursor INTO @job_id
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    EXEC msdb.dbo.sp_add_jobstep @job_id=@job_id, @step_id=1, 
+    @step_name=N'AO Aware1', 
+    @subsystem=N'TSQL', 
+    @command=N'--Step Name: Check_AO_Role
+DECLARE @Role varchar(20), @DBName sysname
+SET @DBName = ''PCSW51''  ----Set DB to Check----
+SELECT @Role=rs.role_desc FROM master.sys.dm_hadr_availability_replica_states rs
+  JOIN master.sys.availability_databases_cluster dc ON rs.group_id = dc.group_id
+  WHERE rs.is_local = 1 AND dc.database_name = @DBName
+--Print (@Role)
+IF @Role = ''PRIMARY''
+  BEGIN
+    PRINT ''This Server is The PRIMARY AlwaysOn Replica for DB: '' + @DBName + ''.  Proceeding with the Job...''
+  END
+ELSE IF @Role = ''SECONDARY''
+  BEGIN
+    PRINT ''This Server is The SECONDARY AlwaysOn Replica for DB: '' + @DBName + ''.  Terminating the Job...''
+    RAISERROR (''Intentionally Terminating Job'', 16, 1)
+  END
+ELSE IF @Role IS NULL
+  BEGIN
+    PRINT ''Unable to recognize Database '' + @DBName + '' as part of any AlwaysOn Availability Groups.  Proceeding with the Job...''
+  END', 
+	@database_name=N'master', 
+    @on_success_action=3, 
+    @on_fail_action=1, 
+    @retry_attempts=0, 
+    @retry_interval=0, 
+    @os_run_priority=0
+    EXEC msdb.dbo.sp_update_job @job_id=@job_id, @start_step_id=1
+    FETCH NEXT FROM job_cursor INTO @job_id
+END
+CLOSE job_cursor
+DEALLOCATE job_cursor

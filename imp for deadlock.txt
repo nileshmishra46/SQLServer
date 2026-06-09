@@ -1,0 +1,6 @@
+kill 92
+go
+SET DEADLOCK_PRIORITY HIGH -- this will ensure that this transaction wont be a deadlock victim
+GO
+ALTER DATABASE TEST SET MULTI_USER WITH ROLLBACK IMMEDIATE
+GO

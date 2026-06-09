@@ -1,0 +1,38 @@
+DECLARE @dbName NVARCHAR(128);
+DECLARE @fileName NVARCHAR(128);
+DECLARE @sql NVARCHAR(MAX);
+
+DECLARE db_cursor CURSOR FOR
+SELECT name
+FROM sys.databases
+WHERE database_id > 4; -- Exclude system databases
+
+OPEN db_cursor;
+FETCH NEXT FROM db_cursor INTO @dbName;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    DECLARE file_cursor CURSOR FOR
+    SELECT name
+    FROM sys.master_files
+    WHERE type = 0 AND database_id = DB_ID(@dbName); -- Data files only
+
+    OPEN file_cursor;
+    FETCH NEXT FROM file_cursor INTO @fileName;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @sql = 'USE [' + @dbName + ']; DBCC SHRINKFILE ([' + @fileName + '], 0);';
+        PRINT @sql;
+
+        FETCH NEXT FROM file_cursor INTO @fileName;
+    END;
+
+    CLOSE file_cursor;
+    DEALLOCATE file_cursor;
+
+    FETCH NEXT FROM db_cursor INTO @dbName;
+END;
+
+CLOSE db_cursor;
+DEALLOCATE db_cursor;

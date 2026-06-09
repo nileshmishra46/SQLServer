@@ -1,0 +1,7 @@
+USE KAV;
+EXEC sp_repldone null, null, 0,0,1;
+EXEC sp_removedbreplication KAV; 
+
+
+
+https://subhrosaha.wordpress.com/2011/12/17/sql-server-log_reuse_wait_desc-set-to-replication/

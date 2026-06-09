@@ -1,0 +1,43 @@
+DECLARE @backupFolder NVARCHAR(255) = 'E:\SQLBackups'
+DECLARE @cmd NVARCHAR(4000)
+DECLARE @dbName NVARCHAR(255)
+DECLARE @backupFile NVARCHAR(255)
+
+-- Create a temporary table to hold the list of backup files
+CREATE TABLE #BackupFiles (BackupFile NVARCHAR(255))
+
+-- Populate the temporary table with the list of backup files
+INSERT INTO #BackupFiles (BackupFile)
+EXEC xp_cmdshell 'dir E:\SQLBackups\*.bak /b'
+
+-- Cursor to iterate through each backup file
+DECLARE backup_cursor CURSOR FOR
+SELECT BackupFile FROM #BackupFiles WHERE BackupFile IS NOT NULL
+
+OPEN backup_cursor
+FETCH NEXT FROM backup_cursor INTO @backupFile
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Extract the database name from the backup file name
+    SET @dbName = REPLACE(@backupFile, '.bak', '')
+
+    -- Construct the restore command
+    SET @cmd = 'RESTORE DATABASE [' + @dbName + '] ' +
+               'FROM DISK = N''' + @backupFolder + '\' + @backupFile + ''' ' +
+               'WITH FILE = 1, ' +
+               'MOVE ''' + @dbName + ''' TO ''E:\SQLData\' + @dbName + '.mdf'', ' +
+               'MOVE ''' + @dbName + '_log'' TO ''E:\SQLogs\' + @dbName + '_log.ldf'', ' +
+               'NOUNLOAD, STATS = 5'
+
+    -- Print the restore command
+    PRINT @cmd
+
+    FETCH NEXT FROM backup_cursor INTO @backupFile
+END
+
+CLOSE backup_cursor
+DEALLOCATE backup_cursor
+
+-- Drop the temporary table
+DROP TABLE #BackupFiles

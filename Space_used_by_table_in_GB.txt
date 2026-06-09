@@ -1,0 +1,25 @@
+--sp_spaceused 'OHTSHP'
+
+-- Create a temporary table to hold the space used information
+CREATE TABLE #SpaceUsed (
+    name NVARCHAR(128),
+    rows CHAR(11),
+    reserved VARCHAR(18),
+    data VARCHAR(18),
+    index_size VARCHAR(18),
+    unused VARCHAR(18)
+);
+
+-- Execute sp_spaceused and insert the result into the temporary table
+INSERT INTO #SpaceUsed
+EXEC sp_spaceused 'OHTLNE';
+
+-- Select the size in GB
+SELECT 
+    name,
+    CAST(CAST(REPLACE(reserved, ' KB', '') AS FLOAT) / 1048576 AS DECIMAL(10, 2)) AS SizeInGB
+FROM 
+    #SpaceUsed;
+
+-- Drop the temporary table
+DROP TABLE #SpaceUsed;

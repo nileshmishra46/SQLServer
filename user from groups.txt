@@ -1,0 +1,9 @@
+-- Replace DOMAIN\YourLogin with the login you want to check
+-- Step 1: Check direct access
+EXEC xp_logininfo 'DOMAIN\YourLogin';
+
+-- Step 2: Check if login is part of any group that has access
+EXEC xp_logininfo 'DOMAIN\YourLogin', 'all';
+
+-- Step 3: (Optional) If you know a group, list its members
+EXEC xp_logininfo 'DOMAIN\SQLUsers', 'members';

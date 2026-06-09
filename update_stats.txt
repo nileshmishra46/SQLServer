@@ -1,0 +1,29 @@
+
+
+
+SET NOCOUNT ON
+GO
+DECLARE updatestats CURSOR FOR
+SELECT table_schema, table_name  
+FROM INFORMATION_SCHEMA.TABLES
+where TABLE_TYPE = 'BASE TABLE' and table_name not like 'OHT%' and table_name NOT IN (('OR_LOG_SO','PRICE_RPLY_LINE')
+OPEN updatestats
+DECLARE @tableSchema NVARCHAR(128)
+DECLARE @tableName NVARCHAR(128)
+DECLARE @Statement NVARCHAR(300)
+FETCH NEXT FROM updatestats INTO @tableSchema, @tableName
+WHILE (@@FETCH_STATUS = 0)
+BEGIN
+   PRINT N'UPDATING STATISTICS ' + '[' + @tableSchema + ']' + '.' + '[' + @tableName + '] - Starts @ '+cast(getdate() as varchar)
+   SET @Statement = 'UPDATE STATISTICS '  + '[' + @tableSchema + ']' + '.' + '[' + @tableName + ']' + '  WITH FULLSCAN'
+   --PRINT @Statement
+   EXEC sp_executesql @Statement
+   PRINT '---------------------------------------------------------------------------------------------'
+   FETCH NEXT FROM updatestats INTO @tableSchema, @tableName
+END
+CLOSE updatestats
+DEALLOCATE updatestats
+GO
+SET NOCOUNT OFF
+GO
+

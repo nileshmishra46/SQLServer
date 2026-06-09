@@ -1,0 +1,7 @@
+SELECT db.name AS LogicalFileName,
+physical_name AS PhysicalFileName,
+CAST((size/131072.0) AS decimal (18,2)) AS FileSizeInGB, 
+CAST(size/131072.0 - CAST(FILEPROPERTY(db.name, 'SpaceUsed') AS decimal)/131072.0 AS decimal (18,2)) AS AvailableSpaceInGB,
+(CAST(((size/131072.0 - CAST(FILEPROPERTY(db.name, 'SpaceUsed') AS decimal )/131072.0) / (size/131072.0)) AS decimal (18,2))) * 100 AS PercentFree
+FROM sys.database_files db ORDER BY 1,2
+GO 

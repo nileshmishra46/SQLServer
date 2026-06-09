@@ -1,0 +1,23 @@
+SELECT TOP 50 
+    a.server_name, 
+    a.database_name, 
+    a.backup_start_date, -- Added column for backup start date
+    a.backup_finish_date, 
+    a.backup_size,
+    CASE a.[type] -- Let's decode the three main types of backup here
+        WHEN 'D' THEN 'Full'
+        WHEN 'I' THEN 'Differential'
+        WHEN 'L' THEN 'Transaction Log'
+        ELSE a.[type]
+    END as BackupType,
+    b.physical_device_name
+FROM 
+    msdb.dbo.backupset a 
+JOIN 
+    msdb.dbo.backupmediafamily b
+ON 
+    a.media_set_id = b.media_set_id
+WHERE 
+    a.database_name LIKE 'PROD%'
+ORDER BY 
+    a.backup_finish_date DESC
